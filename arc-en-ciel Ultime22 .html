@@ -1,0 +1,383 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Arc-en-ciel App Complète</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to right, #ffecd2, #fcb69f);
+  margin:0;
+  padding:20px;
+}
+.box{
+  background: #fff;
+  padding:20px;
+  border-radius:10px;
+  max-width:550px;
+  margin:auto;
+  margin-bottom:15px;
+  box-shadow:0 4px 8px rgba(0,0,0,0.2);
+}
+.hidden{display:none;}
+button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  background-color:#4caf50;
+  color:white;
+  font-weight:bold;
+}
+button:hover{
+  background-color:#45a049;
+}
+input,select{
+  width:100%;
+  padding:8px;
+  margin-top:5px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+.row{
+  display:flex;
+  gap:5px;
+}
+.indicatif{width:25%;text-align:center}
+h2, h3{color:#333;}
+h3{margin-top:10px;}
+.memberCard, .prayerCard, .eventCard{
+  border:1px solid #ddd;
+  padding:10px;
+  margin:5px 0;
+  border-radius:5px;
+  background-color:#f9f9f9;
+}
+.memberCard button, .prayerCard button, .eventCard button{
+  width:48%;
+  margin-top:5px;
+}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL LOGIN -->
+<div class="box" id="globalBox">
+<h2>Accès au système</h2>
+<input type="password" id="globalPass" placeholder="Mot de passe admin ou user">
+<button onclick="checkGlobalPass()">Entrer</button>
+<p id="globalMsg" style="color:red;"></p>
+</div>
+
+<!-- LOGIN -->
+<div class="box hidden" id="loginBox">
+<h2>Connexion</h2>
+<input id="loginName" placeholder="Nom d'utilisateur">
+<input id="loginPass" type="password" placeholder="Mot de passe">
+<button onclick="login()">Connexion</button>
+<button onclick="showRegister()">Créer un compte</button>
+<button onclick="showReset()">Mot de passe oublié</button>
+</div>
+
+<!-- REGISTER -->
+<div class="box hidden" id="registerBox">
+<h2>Créer un compte utilisateur</h2>
+<input id="regName" placeholder="Nom complet">
+<input id="regPass" type="password" placeholder="Mot de passe">
+<button onclick="registerUser()">Créer le compte</button>
+<button onclick="backToLogin()">Retour</button>
+</div>
+
+<!-- RESET -->
+<div class="box hidden" id="resetBox">
+<h2>Réinitialiser mot de passe</h2>
+<select id="resetCountry">
+<option value="+242">🇨🇬 +242</option>
+<option value="+243">🇨🇩 +243</option>
+<option value="+33">🇫🇷 +33</option>
+<option value="+1">🇺🇸 +1</option>
+</select>
+<div class="row">
+<input class="indicatif" id="resetIndicatif" disabled value="+242">
+<input id="resetPhone" placeholder="Numéro de téléphone">
+</div>
+<input id="newPass" type="password" placeholder="Nouveau mot de passe">
+<button onclick="resetPassword()">Réinitialiser</button>
+<button onclick="backToLogin()">Retour</button>
+</div>
+
+<!-- MAIN APP -->
+<div class="box hidden" id="appBox">
+<h2>Bienvenue dans Arc-en-ciel</h2>
+<p><b>Éphésiens 4:3-6</b></p>
+
+<div id="menuBox">
+<button onclick="showAddMember()">Ajouter un membre</button>
+<button onclick="showMembers()">Voir les membres</button>
+<button onclick="showPrayer()">Temps de prière</button>
+<button onclick="showEvents()">Événements</button>
+<button onclick="logout()">Déconnexion</button>
+</div>
+
+<div id="contentBox"></div>
+</div>
+
+<script>
+// --- DATA STORAGE ---
+let users = JSON.parse(localStorage.getItem("users")||"{}");
+let members = JSON.parse(localStorage.getItem("members")||"[]");
+let prayers = JSON.parse(localStorage.getItem("prayers")||"[]");
+let events = JSON.parse(localStorage.getItem("events")||"[]");
+let currentUser = null;
+let globalRole = null;
+
+// --- GLOBAL PASSWORDS ---
+const PASS_USER = "arcenciel_voir";
+const PASS_ADMIN = "arcenciel_modifier";
+
+// --- GLOBAL LOGIN ---
+function checkGlobalPass(){
+  let pass = document.getElementById("globalPass").value;
+  if(pass === PASS_USER || pass === PASS_ADMIN){
+    globalRole = pass === PASS_ADMIN ? "admin" : "user";
+    document.getElementById("globalBox").classList.add("hidden");
+    document.getElementById("loginBox").classList.remove("hidden");
+  }else{
+    document.getElementById("globalMsg").textContent="Mot de passe incorrect !";
+  }
+}
+
+// --- LOGIN ---
+function login(){
+  let name = document.getElementById("loginName").value;
+  let pass = document.getElementById("loginPass").value;
+  if(users[name] && users[name].pass === pass){
+    currentUser = users[name];
+    // si globalRole admin, user ou celui défini
+    currentUser.role = globalRole==="admin" ? "admin" : "user";
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("appBox").classList.remove("hidden");
+    showWelcome();
+  }else{
+    alert("Nom ou mot de passe incorrect");
+  }
+}
+
+// --- REGISTER ---
+function showRegister(){
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("registerBox").classList.remove("hidden");
+}
+
+function registerUser(){
+  let name = document.getElementById("regName").value;
+  let pass = document.getElementById("regPass").value;
+  if(!name || !pass){ alert("Champs manquants"); return; }
+  users[name] = {name, pass, role:"user"};
+  localStorage.setItem("users", JSON.stringify(users));
+  alert("Compte créé !");
+  backToLogin();
+}
+
+// --- RESET ---
+document.getElementById("resetCountry").addEventListener("change", function(){
+  document.getElementById("resetIndicatif").value = this.value;
+});
+
+function showReset(){
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("resetBox").classList.remove("hidden");
+}
+
+function resetPassword(){
+  let phone = document.getElementById("resetIndicatif").value + document.getElementById("resetPhone").value;
+  let newPass = document.getElementById("newPass").value;
+  let found = false;
+  for(let u in users){
+    if(users[u].phone === phone){
+      users[u].pass = newPass;
+      found = true;
+      break;
+    }
+  }
+  if(found){
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("Mot de passe réinitialisé !");
+    backToLogin();
+  }else alert("Numéro introuvable");
+}
+
+// --- BACK ---
+function backToLogin(){
+  document.getElementById("registerBox").classList.add("hidden");
+  document.getElementById("resetBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+}
+
+// --- LOGOUT ---
+function logout(){
+  currentUser=null;
+  document.getElementById("appBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+  document.getElementById("contentBox").innerHTML="";
+}
+
+// --- WELCOME ---
+function showWelcome(){
+  let roleColor = currentUser.role==="admin" ? "red" : "blue";
+  document.getElementById("contentBox").innerHTML = `
+  <h3 style="color:${roleColor};">Bienvenue ${currentUser.name} (${currentUser.role})</h3>
+  <p>Vous pouvez naviguer dans le menu pour voir ou modifier les sections selon vos droits.</p>
+  `;
+}
+
+// --- MEMBERS MANAGEMENT ---
+function showAddMember(){
+  if(currentUser.role!=="admin"){ alert("Seulement l'admin peut ajouter un membre"); return; }
+  let html = `
+    <h3>Ajouter un membre</h3>
+    <input id="memName" placeholder="Nom">
+    <input id="memFirst" placeholder="Prénom">
+    <input id="memAddress" placeholder="Adresse">
+    <input id="memChurch" placeholder="Nom de l'église">
+    <select id="memCountry"><option value="+242">+242</option><option value="+243">+243</option></select>
+    <input id="memPhone" placeholder="Numéro">
+    <input id="memDOB" type="date" placeholder="Date de naissance">
+    <input id="memPOB" placeholder="Lieu de naissance">
+    <button onclick="addMember()">Ajouter</button>
+  `;
+  document.getElementById("contentBox").innerHTML = html;
+}
+
+function addMember(){
+  let member={
+    name: document.getElementById("memName").value,
+    first: document.getElementById("memFirst").value,
+    address: document.getElementById("memAddress").value,
+    church: document.getElementById("memChurch").value,
+    phone: document.getElementById("memCountry").value + document.getElementById("memPhone").value,
+    dob: document.getElementById("memDOB").value,
+    pob: document.getElementById("memPOB").value
+  };
+  members.push(member);
+  localStorage.setItem("members", JSON.stringify(members));
+  alert("Membre ajouté !");
+  showMembers();
+}
+
+function showMembers(){
+  let html="<h3>Liste des membres</h3>";
+  if(members.length===0){ html+="<p>Aucun membre</p>"; }
+  else{
+    members.forEach((m,i)=>{
+      html+=`<div class="memberCard">
+      <b>${m.name} ${m.first}</b><br>Église: ${m.church}<br>Numéro: ${m.phone}<br>
+      ${currentUser.role==="admin" ? `<button onclick="editMember(${i})">Modifier</button><button onclick="deleteMember(${i})">Supprimer</button>` : ''}
+      </div>`;
+    });
+  }
+  document.getElementById("contentBox").innerHTML=html;
+}
+
+function editMember(i){
+  if(currentUser.role!=="admin"){ alert("Seulement l'admin peut modifier"); return; }
+  let m=members[i];
+  let html = `
+    <h3>Modifier membre</h3>
+    <input id="memName" value="${m.name}">
+    <input id="memFirst" value="${m.first}">
+    <input id="memAddress" value="${m.address}">
+    <input id="memChurch" value="${m.church}">
+    <select id="memCountry"><option value="+242">+242</option><option value="+243">+243</option></select>
+    <input id="memPhone" value="${m.phone.slice(3)}">
+    <input id="memDOB" type="date" value="${m.dob}">
+    <input id="memPOB" value="${m.pob}">
+    <button onclick="saveMember(${i})">Enregistrer</button>
+    <button onclick="showMembers()">Annuler</button>
+  `;
+  document.getElementById("contentBox").innerHTML=html;
+}
+
+function saveMember(i){
+  let m=members[i];
+  m.name=document.getElementById("memName").value;
+  m.first=document.getElementById("memFirst").value;
+  m.address=document.getElementById("memAddress").value;
+  m.church=document.getElementById("memChurch").value;
+  m.phone=document.getElementById("memCountry").value + document.getElementById("memPhone").value;
+  m.dob=document.getElementById("memDOB").value;
+  m.pob=document.getElementById("memPOB").value;
+  localStorage.setItem("members", JSON.stringify(members));
+  alert("Membre mis à jour !");
+  showMembers();
+}
+
+function deleteMember(i){
+  if(currentUser.role!=="admin"){ alert("Seulement l'admin peut supprimer"); return; }
+  if(confirm("Supprimer ce membre ?")){
+    members.splice(i,1);
+    localStorage.setItem("members", JSON.stringify(members));
+    showMembers();
+  }
+}
+
+// --- PRAYERS ---
+function showPrayer(){
+  let html="<h3>Temps de prière</h3>";
+  html+=`<input id="prayerText" placeholder="Écrire une prière">`;
+  if(currentUser.role==="admin"){ html+=`<button onclick="addPrayer()">Ajouter</button>`;}
+  if(prayers.length>0){
+    html+="<h4>Historique des prières :</h4>";
+    prayers.forEach((p,i)=>{
+      html+=`<div class="prayerCard">${p}`;
+      if(currentUser.role==="admin"){ html+=`<button onclick="deletePrayer(${i})">Supprimer</button>`;}
+      html+="</div>";
+    });
+  }
+  document.getElementById("contentBox").innerHTML=html;
+}
+
+function addPrayer(){
+  let t=document.getElementById("prayerText").value;
+  if(t){ prayers.push(t); localStorage.setItem("prayers",JSON.stringify(prayers)); showPrayer(); }
+}
+
+function deletePrayer(i){
+  prayers.splice(i,1);
+  localStorage.setItem("prayers",JSON.stringify(prayers));
+  showPrayer();
+}
+
+// --- EVENTS ---
+function showEvents(){
+  let html="<h3>Événements / Réunions</h3>";
+  html+=`<input id="eventText" placeholder="Nouvel événement">`;
+  if(currentUser.role==="admin"){ html+=`<button onclick="addEvent()">Ajouter</button>`;}
+  if(events.length>0){
+    html+="<h4>Historique :</h4>";
+    events.forEach((e,i)=>{
+      html+=`<div class="eventCard">${e}`;
+      if(currentUser.role==="admin"){ html+=`<button onclick="deleteEvent(${i})">Supprimer</button>`;}
+      html+="</div>";
+    });
+  }
+  document.getElementById("contentBox").innerHTML=html;
+}
+
+function addEvent(){
+  let t=document.getElementById("eventText").value;
+  if(t){ events.push(t); localStorage.setItem("events",JSON.stringify(events)); showEvents(); }
+}
+
+function deleteEvent(i){
+  events.splice(i,1);
+  localStorage.setItem("events",JSON.stringify(events));
+  showEvents();
+}
+
+</script>
+</body>
+</html>
